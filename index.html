@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<script src="p5.js"></script>
+	<script src="jquery-3.5.1.min.js"></script>
+	<script src="js/Smooth-0.1.7.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/addons/p5.sound.min.js"></script>
+	<script src="https://unpkg.com/h264-mp4-encoder/embuild/dist/h264-mp4-encoder.web.js"></script>
+
+	
+	<meta charset="utf-8" />
+	<link rel="icon" type="image/png" href="favicon/favicon.ico" />
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<style type="text/css">
+	body {
+		overflow: hidden;
+	}
+
+
+	</style>
+</head>
+
+<body>
+
+	
+	<h1>aldo - generator</h1>
+	<p>preview:</p>
+	<input type="file" id="fileinput" />
+	<button data-js="play">play</button>
+		<button data-js="stop">stop</button>
+		<button data-js="generate">generate Video</button>
+
+<div data-js="info"></div>
+
+	<div id="sketch">
+	</div>
+
+	<div id="overlayRec"><span>Please wait...</span></div>
+	<script>
+	var data = []
+
+	var highFac = 0;
+
+	let pg;
+
+	var img;
+
+	let effectShader;
+	let blurShader;
+
+
+	let backgroundLayer;
+	let shaderLayer;
+	let shaderLayer2;
+	let copyLayer;
+	let copyLayer2;
+	let drawLayer;
+
+	var iteration = 0;
+
+	var drawing = false;
+
+	var w = 1920 / 2;
+	var h = 1080 / 2;
+
+	var finalW = 1920 / 2;
+	var finalH = 1080 / 2;
+
+	var pixelate = 1;
+
+	let song, amp;
+	let lastVol = 0;
+	let vollAdder = 0;
+
+	var fft;
+
+	// var mySound = new p5.SoundFile();
+	var sound;
+
+	let recording = false;
+	var encoder;
+	var context;
+
+	var frame;
+
+	var totalFrames;
+	var currentFrame = 0;
+
+	let walker1;
+	let walker2;
+
+	var resetOnRecord = true;
+
+	var strokeThickness = 0.1;
+	var strokeSpeed = 1.0;
+	var strokeBlur = 0.1;
+	var strokeFade = 0.0;
+	let strokeThicknessSlider;
+	let strokeSpeedSlider;
+	let strokeBlurSlider;
+	let strokeFadeSlider;
+
+
+	var audioContext;
+	var myAudioBuffer = [];
+	var myAudioBufferSmooth= () => {return 1};
+	var myVolBuffer = [];
+	var audioDuration = 0;
+
+	var fps = 25;
+
+	var smootheningAudio = 0.9; //between 0.1 and 1.0
+
+	let color0, color1, color2, color3, color4, color5;
+
+	var blurToggle = true;
+
+	function loadedSoundCallBack() {
+	   // mySound.setVolume(1.0);
+
+
+	}
+
+	function buttonPlay() {
+
+	   // mySound.play();
+
+	}
+
+	function buttonStop() {
+		//mySound.stop();
+	}
+
+	function download(url, filename) {
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = filename || "download";
+		anchor.click();
+		console.log("file downloaded")
+	};
+
+	async function record() {
+		encoder = await HME.createH264MP4Encoder();
+		// Must be a multiple of 2.
+		encoder.width = finalW * 2;
+		encoder.height = finalH * 2;
+		encoder.speed = 10;
+		encoder.quantizationParameter = 12;
+		encoder.outputFilename = "video";
+		encoder.frameRate = fps;
+		encoder.groupOfPictures = fps;
+		encoder.initialize();
+		recording = true;
+		initForRecord();
+		printImagetoVideo();
+		
+
+	}
+
+
+	function initForRecord() {
+		iteration = 0;
+		if(resetOnRecord) copyLayer.background(color0.color());
+		console.log("OVERLAY");
+		let overlay = select("#overlayRec");
+		overlay.style("display", "block");
+
+		totalFrames = audioDuration * fps;
+		currentFrame = 0;
+
+		backgroundLayer.background(255, 255, 255);
+
+	}
+
+
+	function printImagetoVideo() {
+	
+		var i=0, j=totalFrames;
+		var iv = setInterval(function() {
+
+			for(var x = 0; x <= 30;x++){
+
+			var iterations = int(strokeSpeedSlider.value()/1);
+			for (var t = 0; t<iterations;t++){
+			    visualize(t, totalFrames);
+			}
+
+				document.getElementById("overlayRec").firstChild.innerHTML = i +" of " +int(totalFrames)+ " frames";
+
+				var width = context.drawingBufferWidth;
+				var height = context.drawingBufferHeight;
+				var pixels = new Uint8Array(width * height * 4);
+				context.readPixels(0, 0, width, height, context.RGBA, context.UNSIGNED_BYTE, pixels);
+
+				var halfHeight = height / 2 | 0; // the | 0 keeps the result an int
+				var bytesPerRow = width * 4;
+
+				// make a temp buffer to hold one row
+				var temp = new Uint8Array(width * 4);
+				for (var y = 0; y < halfHeight; ++y) {
+					var topOffset = y * bytesPerRow;
+					var bottomOffset = (height - y - 1) * bytesPerRow;
+
+					// make copy of a row on the top half
+					temp.set(pixels.subarray(topOffset, topOffset + bytesPerRow));
+
+					// copy a row from the bottom half to the top
+					pixels.copyWithin(topOffset, bottomOffset, bottomOffset + bytesPerRow);
+
+					// copy the copy of the top half row to the bottom half 
+					pixels.set(temp, bottomOffset);
+				}
+
+				encoder.addFrameRgba(pixels)
+				//console.log("Done " + i + " / " + totalFrames +" frames");
+
+			    // things that take a while to do
+			    if (++i>=j) {
+			    	clearInterval(iv);
+			    	stopRecord();
+			    	break;
+			    }
+			}
+
+
+		}, 1);
+			
+
+	}
+
+
+
+
+	function stopRecord() {
+
+		recording = false;
+		// For canvas:
+		// encoder.addFrameRgba(ctx.getImageData(0, 0, encoder.width * encoder.height).data);
+		encoder.finalize();
+		const uint8Array = encoder.FS.readFile(encoder.outputFilename);
+		download(URL.createObjectURL(new Blob([uint8Array], { type: "video/mp4" })))
+
+		encoder.delete();
+
+		 let overlay = select("#overlayRec");
+		 overlay.style("display", "none");
+
+	}
+
+
+
+	class Walker {
+
+	  constructor() {
+	    this.x = 0.5;
+	    this.y = 0.5;
+	    this.r = 0.0;
+	    this.tx = random(0,100);
+	    this.ty = random(500,10000); 
+	    this.tr = random(0,200);
+	  }
+
+	  step() {
+	    // print(noise(0)); // Aktiver denne og se selv
+	    
+	    this.x = map(noise(this.tx), 0, 1, -0.8, 2.8);
+	    this.y = map(noise(this.ty), 0, 1, -0.8, 1.8);
+	    this.r = map(noise(this.tr), 0, 1, -960, 960);
+
+	    // Flytter seg langs noisekurven. Kurven er ulik for hver kjøring
+	    // Liten forflytning gjør at noise gir en nærliggende verdi
+	    // Stor forflytning gir stor forskjell i noiseverdiene
+	    this.tx += 0.008/4.;//*strokeSpeedSlider.value();  
+	    this.ty += 0.005/4.;//*strokeSpeedSlider.value();
+	    this.tr += 0.005/8.;
+	  }
+
+	  rotate_point(cx,cy,angle,px,py)
+	{
+
+		var p = {
+	    x:  px,
+	    y: py
+	  };
+
+	  let s = sin(angle);
+	  let c = cos(angle);
+
+	  // translate point back to origin:
+	  p.x -= cx;
+	  p.y -= cy;
+
+	  // rotate point
+	  let xnew = p.x * c - p.y * s;
+	  let ynew = p.x * s + p.y * c;
+
+	  // translate point back:
+	  p.x = xnew + cx;
+	  p.y = ynew + cy;
+	  return p;
+	}
+
+
+	}
+
+
+	function preload() {
+		effectShader = loadShader('shader.vert', 'shader.frag');
+	    blurShader = loadShader('blur.vert', 'blur.frag');
+	}
+
+
+	function setup() {
+
+		//song.play();  
+		amp = new p5.Amplitude(0.98);
+		fft = new p5.FFT(0.98);
+
+		createCanvas(finalW,finalH);
+
+		let canvasElement = createCanvas(finalW, finalH, WEBGL).elt;
+		context = canvasElement.getContext('webgl');
+		frameRate(fps);
+
+		backgroundLayer = createGraphics(finalW, finalH, WEBGL);
+		context = backgroundLayer.elt.getContext('webgl');
+		shaderLayer = createGraphics(w, h, WEBGL);
+		shaderLayer2 = createGraphics(finalW, finalH, WEBGL);
+		copyLayer = createGraphics(w, h);
+		copyLayer2 = createGraphics(finalW, finalH, WEBGL);
+		drawLayer = createGraphics(w, h);
+
+		var label = createP("background color");
+  		label.position(width+40, 40);
+		color0 = createColorPicker(color(0, 0, 0));
+		color0.position(width+40, 80);
+
+		var label = createP("gradient color");
+		label.position(width+40, 110);
+		color1 = createColorPicker(color(255, 148, 53));
+		color1.position(width+40, 150);
+		color2 = createColorPicker(color(220, 72, 82));
+		color2.position(width+100, 150);
+		color3 = createColorPicker(color(60, 40, 99));
+		color3.position(width+160, 150);
+		color4 = createColorPicker(color(28, 68, 109));
+		color4.position(width+220, 150);
+		color5 = createColorPicker(color(0, 145, 100));
+		color5.position(width+280, 150);
+
+		// checkbox = createCheckbox('blur', true);
+		// checkbox.position(width+40, 150);
+  // 		checkbox.changed(toggleBlur);
+
+  		var label = createP("thickness");
+  		label.position(width+40, 210);
+  		strokeThicknessSlider = createSlider(0, 0.2, 0.03,0.001);
+		strokeThicknessSlider.position(width+40, 250);
+		strokeThicknessSlider.style('width', '200px');
+
+		var label = createP("speed");
+  		label.position(width+40, 260);
+		strokeSpeedSlider = createSlider(0, 5, 1, 0.05);
+		strokeSpeedSlider.position(width+40, 300);
+		strokeSpeedSlider.style('width', '200px');
+
+		var label = createP("blur");
+  		label.position(width+40, 310);
+		strokeBlurSlider = createSlider(0, 0.5, 0.001,0.001);
+		strokeBlurSlider.position(width+40, 350);
+		strokeBlurSlider.style('width', '200px');
+
+		var label = createP("fade");
+  		label.position(width+40, 360);
+		strokeFadeSlider = createSlider(0, 0.2, 0.000,0.001);
+		strokeFadeSlider.position(width+40, 400);
+		strokeFadeSlider.style('width', '200px');
+
+  		walker1 = new Walker();
+  		walker2 = new Walker();
+
+	}
+
+
+	function draw() {
+		
+		if(sound && !recording) {
+			var iterations = strokeSpeedSlider.value()/1;
+
+			for (var i = 0; i<iterations;i++){
+			visualize(sound.getCurrentTime(), sound.getDuration());
+			}
+		}
+	    imageMode(CORNER);
+	    image(backgroundLayer, -finalW/2, -finalH/2, finalW, finalH);
+
+	}
+
+	function toggleBlur(){
+		if (this.checked()) {
+	    	blurToggle = true;
+	  } else {
+	    	blurToggle = false;
+	  }
+	}
+
+	function visualize(frameV, lengthV){
+
+
+		backgroundLayer.background(color0.color());
+
+
+		//get audio information, feed into vol, treble and bass
+		var indexBuffer = 0;
+		indexBuffer =  int(map(frameV, 0, lengthV, 0, myAudioBuffer.length));
+
+		var vol = 0;
+		if (myAudioBuffer.length > 0 && indexBuffer < myAudioBuffer.length) {
+			vol = sqrt(myAudioBuffer[indexBuffer][4]/200)/6;
+		}
+
+		var treble = 0;
+		if (myAudioBuffer.length > 0 && indexBuffer < myAudioBuffer.length) {
+			treble = myAudioBuffer[indexBuffer][3]*30.;
+		}
+
+		var bass = 0;
+		if (myAudioBuffer.length > 0 && indexBuffer < myAudioBuffer.length) {
+		   bass = myAudioBuffer[indexBuffer][0]*30.;
+		}
+
+		vollAdder += vol;
+
+		walker1.step();
+		walker2.step();
+
+		var rotation = radians(walker1.r);
+		var rotatedWalker1 = walker1.rotate_point((walker1.x+walker2.x)/2,(walker1.y+walker2.y)/2,rotation, walker1.x,walker1.y);
+  		var rotatedWalker2 = walker1.rotate_point((walker1.x+walker2.x)/2,(walker1.y+walker2.y)/2,rotation, walker2.x,walker2.y);
+
+		shaderLayer.shader(effectShader);
+		effectShader.setUniform("u_resolution", [w, h]);
+		effectShader.setUniform("u_mouse", [mouseX / width, map(mouseY, 0, finalH, 1, 0)]);
+		effectShader.setUniform("u_time", millis() / 500.0);
+		effectShader.setUniform("rand", random(0, 10));
+		effectShader.setUniform("point1", [rotatedWalker1.x,rotatedWalker1.y]);
+		effectShader.setUniform("point2", [rotatedWalker2.x,rotatedWalker2.y]);
+		effectShader.setUniform("vol", vol / 20.);
+		effectShader.setUniform("vollAdder", vollAdder);
+		effectShader.setUniform("treble", treble / 20.);
+		effectShader.setUniform("bass", bass / 400.);
+		effectShader.setUniform("strokeThickness", strokeThicknessSlider.value());
+		effectShader.setUniform("strokeSpeed", strokeSpeedSlider.value());
+		effectShader.setUniform("strokeBlur", strokeBlurSlider.value());
+		effectShader.setUniform("strokeFade", strokeFadeSlider.value());
+		effectShader.setUniform("strokeRotation", rotation);
+		effectShader.setUniform("uIteration", iteration);
+		effectShader.setUniform("tex", copyLayer);
+		effectShader.setUniform("bgColor", [ color0.color()._array[0], color0.color()._array[1], color0.color()._array[2] ]);
+		effectShader.setUniform("colors", [ color1.color()._array[0], color1.color()._array[1], color1.color()._array[2],
+											color2.color()._array[0], color2.color()._array[1], color2.color()._array[2],
+											color3.color()._array[0], color3.color()._array[1], color3.color()._array[2],
+											color4.color()._array[0], color4.color()._array[1], color4.color()._array[2],
+											color5.color()._array[0], color5.color()._array[1], color5.color()._array[2]
+		]);
+
+		shaderLayer.rect(0, 0, w, h);
+		copyLayer.image(shaderLayer, 0, 0, w, h);
+
+	    copyLayer2.imageMode(CENTER);
+	    copyLayer2.background(255);
+	    copyLayer2.image(copyLayer, 0, 0, w, h);
+
+		backgroundLayer.imageMode(CENTER);
+		backgroundLayer.image(copyLayer2, 0, 0, finalW, finalH);
+		iteration += 1;
+	}
+
+
+function createSound(buffer, context) {
+	var sourceNode = null,
+		startedAt = 0,
+		pausedAt = 0,
+		playing = false;
+
+	var play = function() {
+		var offset = pausedAt;
+
+
+		sourceNode = context.createBufferSource();
+		sourceNode.connect(context.destination);
+		sourceNode.buffer = buffer;
+		sourceNode.start(0, offset);
+
+		startedAt = context.currentTime - offset;
+		pausedAt = 0;
+		playing = true;
+	};
+
+	var pause = function() {
+		var elapsed = context.currentTime - startedAt;
+		stop();
+		pausedAt = elapsed;
+	};
+
+	var stop = function() {
+		if (sourceNode) {          
+			sourceNode.disconnect();
+			sourceNode.stop(0);
+			sourceNode = null;
+		}
+		pausedAt = 0;
+		startedAt = 0;
+		playing = false;
+		vollAdder = 0;
+		copyLayer.background(color0.color());
+		walker1.tx = random(0,100);
+	    walker1.ty = random(500,10000); 
+	    walker1.tr = random(0,200);
+	    walker2.tx = random(0,100);
+	    walker2.ty = random(500,10000); 
+	    walker2.tr = random(0,200);
+	};
+  
+	var getPlaying = function() {
+		return playing;
+	};
+  
+	var getCurrentTime = function() {
+		if(pausedAt) {
+			return pausedAt;
+		}
+		if(startedAt) {
+			return context.currentTime - startedAt;
+		}
+		return 0;
+	};
+  
+	var getDuration = function() {
+	  return buffer.duration;
+	};
+
+	return {
+		getCurrentTime: getCurrentTime,
+		getDuration: getDuration,
+		getPlaying: getPlaying,
+		play: play,
+		pause: pause,
+		stop: stop
+	};
+}
+
+
+var recordBtn = document.querySelector('[data-js="generate"]');
+recordBtn.addEventListener('click', function() {record()});
+
+
+var init = function(buffer) {
+	sound = createSound(buffer, audioContext);
+
+	var play = document.querySelector('[data-js="play"]'),
+		stop = document.querySelector('[data-js="stop"]'),
+		info = document.querySelector('[data-js="info"]');
+  
+	play.addEventListener('click', function() {
+		if (sound.getPlaying()) {
+			sound.pause();
+			play.innerHTML = 'play';
+		} else {
+			sound.play();
+			play.innerHTML = 'pause';
+		}
+	});
+	stop.addEventListener('click', function() {
+		sound.stop();
+		play.innerHTML = 'play';
+	});
+  
+	function update() {
+		window.requestAnimationFrame(update);
+		info.innerHTML = sound.getCurrentTime().toFixed(1) + '/' + sound.getDuration().toFixed(1);
+	}
+	update();
+};
+
+
+
+
+	document.getElementById("fileinput").addEventListener('change', function() {
+
+		// Obtain the uploaded file, you can change the logic if you are working with multiupload
+		var file = this.files[0];
+
+		// Create instance of FileReader
+		var reader = new FileReader();
+
+		// When the file has been succesfully read
+		reader.onload = function(event) {
+
+			// Create an instance of AudioContext
+			audioContext = window.AudioContext || window.webkitAudioContext;
+
+			audioContext = new AudioContext({
+				latencyHint: 'interactive',
+				sampleRate: 44100,
+			});
+
+
+			//reset my buffers
+			myAudioBuffer = [];
+			myVolBuffer = [];
+
+			var duration = 0;
+			// Asynchronously decode audio file data contained in an ArrayBuffer.
+			audioContext.decodeAudioData(event.target.result, function(buffer) {
+
+				duration = buffer.duration;
+
+				var fftSize = 16384;
+				var sampleRate = 44100;
+				var offlineCtx = new OfflineAudioContext(1, buffer.length, sampleRate);
+				var analyser = offlineCtx.createAnalyser();
+				analyser.fftSize = fftSize;
+				analyser.smoothingTimeConstant = 0.5;
+				source = offlineCtx.createBufferSource(buffer);
+
+				source.connect(analyser);
+				analyser.connect(offlineCtx.destination);
+
+				var bufferLength = analyser.frequencyBinCount; // number of frequ bands (half of fftSize)
+				//var dataArray = new Float32Array(bufferLength);
+
+				//analyser.getFloatFrequencyData(dataArray);
+
+				var leftChannel = buffer.getChannelData(0);
+
+				var amount = duration * 25;
+				var frames = amount;
+				var totallength = leftChannel.length;
+				var eachBlock = Math.floor(totallength / amount);
+
+
+				for (var i = 0; i <= amount; i++) {
+					var audioBuffKey = Math.floor(eachBlock * i); // replace i with frame – done
+					var vol = leftChannel[audioBuffKey];
+					myVolBuffer.push(vol);
+				}
+
+				fftAnalyser(leftChannel, sampleRate, fftSize, callback, finished);
+
+				// example 12.3234 seconds
+				console.log("The duration of the song is of: " + duration + " seconds");
+				audioDuration = duration;
+				console.log("Audio needs " + frames + " frames");
+
+				//create playable interface and audio
+				init(buffer);
+
+
+					 });
+		};
+
+
+
+
+		// In case that the file couldn't be read
+		reader.onerror = function(event) {
+			console.error("An error ocurred reading the file: ", event);
+		};
+
+		// Read file as an ArrayBuffer, important !
+		reader.readAsArrayBuffer(file);
+	}, false);
+
+
+
+	function getAverageVolume(array) {
+		var values = 0;
+		var average;
+		var length = array.length;
+		// get all the frequency amplitudes
+		for (var i = 0; i < length; i++) { values += array[i]; } average = values / length;
+		return average;
+	}
+
+
+	function finished() {
+		//console.log("end of sample");
+
+	}
+
+
+	function callback(data) {
+		callback.count = callback.count || 0;
+		myAudioBuffer.push(data);
+	}
+
+	fftAnalyser = function(buff, sampleRate, fftSize, callback, onend) {
+
+		// by Zibri (2019)
+		var frequencies = [1, 400, 1400, 9600]; //for example
+		var frequencyBinValue = (f) => {
+			const hzPerBin = (ctx.sampleRate) / (2 * analyser.frequencyBinCount);
+			const index = parseInt((f + hzPerBin / 2) / hzPerBin);
+			return data[index] + 1;
+		}
+		ctx = new OfflineAudioContext(1, buff.length, sampleRate);
+		ctx.sampleRate = sampleRate;
+		ctx.destination.channelCount = 1;
+
+		processor = ctx.createScriptProcessor(256 * 4, 1, 1); //this sets like the framerate of the audio
+		processor.connect(ctx.destination);
+
+		analyser = ctx.createAnalyser();
+		analyser.fftSize = fftSize; //fftSize means how many frequencies there will be analysed
+
+		analyser.smoothingTimeConstant = smootheningAudio;
+
+		//analyser.minDecibels = -60;
+		//analyser.maxDecibels = -20;
+
+		source = ctx.createBufferSource();
+		source.connect(analyser);
+
+		processor.onaudioprocess = function(e) {
+			data = new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(data);
+			average = getAverageVolume(data);
+			state = frequencies.map(frequencyBinValue.bind(this))
+			state.push(average);
+			if ("function" == typeof callback)
+				onend();
+			callback(state);
+		}
+
+		analyser.connect(processor);
+
+		var sbuffer = ctx.createBuffer(1, buff.length, ctx.sampleRate);
+		sbuffer.getChannelData(0).set(buff);
+		source.buffer = sbuffer;
+
+		source.onended = function(e) {
+			console.log("Analysis ended.");
+			let overlay = select("#overlayRec");
+			overlay.style("display", "none");
+			tmpArrayVol = [];
+			for(var i =0; i<myAudioBuffer.length; i++){
+				tmpArrayVol.push(myAudioBuffer[i][4])
+			}
+			var max_of_array = Math.max.apply(Math, tmpArrayVol);
+			tmpArrayVol = tmpArrayVol.map(x => x / max_of_array);
+			//myAudioBufferSmooth = smoothening(tmpArrayVol, 1);
+			
+			smoothArray = []
+			var intervals = 50;
+			smoothArray.push(tmpArrayVol[int(0)]);
+			for (var i = 1; i < intervals; i++) {
+				smoothArray.push(tmpArrayVol[int((myAudioBuffer.length/intervals)*i)]);
+			}
+			smoothArray.push(tmpArrayVol[int(myAudioBuffer.length-1)]);
+
+			myAudioBufferSmooth = Smooth(smoothArray, {scaleTo: [0,10]});
+
+			if ("function" == typeof onend)
+				onend();
+		}
+
+		console.log("Start Analysis.");
+
+		document.getElementById("overlayRec").firstChild.innerHTML = "Loading audio....";
+		let overlay = select("#overlayRec");
+		overlay.style("display", "block");
+
+		source.start(0);
+		ctx.startRendering();
+	}
+
+
+function myAverage(data) {
+    var sum = data.reduce(function(sum, value) {
+        return sum + value;
+    }, 0);
+    var avg = sum / data.length;
+    return avg;
+}
+
+function smoothening(values, alpha) {
+    var weighted = myAverage(values) * alpha;
+    var smoothed = [];
+    var maxVal = 0;
+    var minVal = 0;
+    for (var i in values) {
+        var curr = values[i];
+        var prev = smoothed[i - 1] || values[values.length - 1];
+        var next = curr || values[0];
+        var improved = Number(this.myAverage([weighted, prev, curr, next]).toFixed(2));
+        maxVal = max(maxVal, improved);
+        minVal = min(minVal, improved);
+        smoothed.push(improved);
+    }
+    return smoothed;
+}
+
+
+
+
+	// Chrome 70 will require user gestures to enable web audio api > https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
+	// Click on the web page to start audio 
+	// function touchStarted() {
+	//   getAudioContext().resume();
+	// }
+	</script>
+</body>
+
+</html>
