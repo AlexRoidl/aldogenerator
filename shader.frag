@@ -23,6 +23,7 @@ uniform float strokeSpeed;
 uniform float strokeBlur;
 uniform float strokeFade;
 uniform float strokeRotation;
+uniform float colorChangeSpeed;
 
 varying vec2 vTexCoord;
 
@@ -45,8 +46,9 @@ vec3 hsb2rgb( in vec3 c ){
 
 
 vec3 custCol(in float c){
-		float flattening = 0.05;
-		c = smoothstep(0.0,1.0,clamp(abs(mod(c++,2.0)-1.0)*(1.0+2.*flattening)-flattening,0.0,1.0));
+		// flattening
+		float flattening = 0.0;
+		c = clamp(abs(mod(c++,2.0)-1.0)*(1.0+2.*flattening)-flattening,0.0,1.0);
 		float h0 = 0.5;
 		float h1 = 0.25;
 		float h2 = 0.75;
@@ -166,8 +168,8 @@ vec3 distanceColor(vec2 a, vec2 b, vec2 p) {
 		// Map the angle (-PI to PI) to the Hue (from 0 to 1)
 		// and the Saturation to the radius
 		//vec3 color = vec3(custCol(sin(angle/TWO_PI)*2.));
-		vec3 color = vec3(custCol(sin(strokeRotation/TWO_PI)*4.));
-		//vec3 color = vec3(custCol(sin(u_time/20.)*2.));
+		vec3 color = vec3(custCol(strokeRotation/TWO_PI*2.+(u_time/45.*colorChangeSpeed)));
+		//vec3 color = vec3(custCol(u_time/15.*colorChangeSpeed));
 		
 		return color;
 }

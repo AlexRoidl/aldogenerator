@@ -90,16 +90,16 @@
 	let walker1;
 	let walker2;
 
+	var maxLineLength = 0.9;
+	var minLineLength = 0.1;
+
 	var resetOnRecord = true;
 
-	var strokeThickness = 0.1;
-	var strokeSpeed = 1.0;
-	var strokeBlur = 0.1;
-	var strokeFade = 0.0;
 	let strokeThicknessSlider;
 	let strokeSpeedSlider;
 	let strokeBlurSlider;
 	let strokeFadeSlider;
+	let colorChangeSpeedSlider;
 
 
 	var audioContext;
@@ -256,24 +256,28 @@
 	    this.x = 0.5;
 	    this.y = 0.5;
 	    this.r = 0.0;
+	    this.l = 0.0;
 	    this.tx = random(0,100);
 	    this.ty = random(500,10000); 
 	    this.tr = random(0,200);
+	    this.tl = random(0,500);
 	  }
 
 	  step() {
 	    // print(noise(0)); // Aktiver denne og se selv
 	    
-	    this.x = map(noise(this.tx), 0, 1, -0.8, 2.8);
-	    this.y = map(noise(this.ty), 0, 1, -0.8, 1.8);
-	    this.r = map(noise(this.tr), 0, 1, -960, 960);
+	    this.x = map(noise(this.tx), 0, 1, -0.5, 2.5);
+	    this.y = map(noise(this.ty), 0, 1, -0.2, 1.2);
+	    this.r = map(noise(this.tr), 0, 1, -1260, 1260);
+	    this.l = map(noise(this.tl), 0, 1, 0.0, 0.5);
 
 	    // Flytter seg langs noisekurven. Kurven er ulik for hver kjøring
 	    // Liten forflytning gjør at noise gir en nærliggende verdi
 	    // Stor forflytning gir stor forskjell i noiseverdiene
 	    this.tx += 0.008/4.;//*strokeSpeedSlider.value();  
 	    this.ty += 0.005/4.;//*strokeSpeedSlider.value();
-	    this.tr += 0.005/8.;
+	    this.tr += 0.005/7.;
+	    this.tl += 0.005;
 	  }
 
 	  rotate_point(cx,cy,angle,px,py)
@@ -358,29 +362,98 @@
   		strokeThicknessSlider = createSlider(0, 0.2, 0.03,0.001);
 		strokeThicknessSlider.position(width+40, 250);
 		strokeThicknessSlider.style('width', '200px');
+		strokeThicknessSlider.input(updateThickness);
+		textboxThicknessSlider = createInput('enter text');
+  		textboxThicknessSlider.position(width+40+150, 210+15);
+  		textboxThicknessSlider.value(strokeThicknessSlider.value());
+  		textboxThicknessSlider.size(40)
+  		textboxThicknessSlider.input(updateThicknessSlide);
 
 		var label = createP("speed");
   		label.position(width+40, 260);
 		strokeSpeedSlider = createSlider(0, 5, 1, 0.05);
 		strokeSpeedSlider.position(width+40, 300);
 		strokeSpeedSlider.style('width', '200px');
+		strokeSpeedSlider.input(updateSpeed);
+		textboxSpeedSlider = createInput('enter text');
+  		textboxSpeedSlider.position(width+40+150, 260+15);
+  		textboxSpeedSlider.value(strokeSpeedSlider.value());
+  		textboxSpeedSlider.size(40)
+  		textboxSpeedSlider.input(updateSpeedSlide);
 
 		var label = createP("blur");
   		label.position(width+40, 310);
 		strokeBlurSlider = createSlider(0, 0.5, 0.001,0.001);
 		strokeBlurSlider.position(width+40, 350);
 		strokeBlurSlider.style('width', '200px');
+		strokeBlurSlider.input(updateBlur);
+		textboxBlurSlider = createInput('enter text');
+  		textboxBlurSlider.position(width+40+150, 310+15);
+  		textboxBlurSlider.value(strokeBlurSlider.value());
+  		textboxBlurSlider.size(40)
+  		textboxBlurSlider.input(updateBlurSlide);
 
 		var label = createP("fade");
   		label.position(width+40, 360);
 		strokeFadeSlider = createSlider(0, 0.2, 0.000,0.001);
 		strokeFadeSlider.position(width+40, 400);
 		strokeFadeSlider.style('width', '200px');
+		strokeFadeSlider.input(updateFade);
+		textboxFadeSlider = createInput('enter text');
+  		textboxFadeSlider.position(width+40+150, 360+15);
+  		textboxFadeSlider.value(strokeFadeSlider.value());
+  		textboxFadeSlider.size(40)
+  		textboxFadeSlider.input(updateFadeSlide);
+
+  		var label = createP("color speed");
+  		label.position(width+40, 460);
+		colorChangeSpeedSlider = createSlider(0, 3, 1, 0.05);
+		colorChangeSpeedSlider.position(width+40, 500);
+		colorChangeSpeedSlider.style('width', '200px');
+		colorChangeSpeedSlider.input(updateColorChange);
+		textboxcolorChangeSpeedSlider = createInput('enter text');
+  		textboxcolorChangeSpeedSlider.position(width+40+150, 460+15);
+  		textboxcolorChangeSpeedSlider.value(colorChangeSpeedSlider.value());
+  		textboxcolorChangeSpeedSlider.size(40)
+  		textboxcolorChangeSpeedSlider.input(updateColorChangeSlide);
 
   		walker1 = new Walker();
   		walker2 = new Walker();
 
 	}
+
+
+	function updateThickness(){
+		textboxThicknessSlider.value(strokeThicknessSlider.value());
+	}
+	function updateThicknessSlide(){
+		strokeThicknessSlider.value(textboxThicknessSlider.value())
+	}
+	function updateSpeed(){
+		textboxSpeedSlider.value(strokeSpeedSlider.value());
+	}
+	function updateSpeedSlide(){
+		strokeSpeedSlider.value(textboxSpeedSlider.value());
+	}
+	function updateBlur(){
+		textboxBlurSlider.value(strokeBlurSlider.value());
+	}
+	function updateBlurSlide(){
+		strokeBlurSlider.value(textboxBlurSlider.value());
+	}
+	function updateFade(){
+		textboxFadeSlider.value(strokeFadeSlider.value());
+	}
+	function updateFadeSlide(){
+		strokeFadeSlider.value(textboxFadeSlider.value());
+	}
+	function updateColorChange(){
+		textboxcolorChangeSpeedSlider.value(colorChangeSpeedSlider.value());
+	}
+	function updateColorChangeSlide(){
+		colorChangeSpeedSlider.value(textboxcolorChangeSpeedSlider.value());
+	}
+
 
 
 	function draw() {
@@ -435,9 +508,14 @@
 		walker1.step();
 		walker2.step();
 
+		var lx1 = walker1.x;
+		var ly1 = walker1.y-map(walker1.l, 0.0,0.5,minLineLength/2, maxLineLength/2);
+		var lx2 = walker1.x;
+		var ly2 = walker1.y+map(walker1.l, 0.0,0.5,minLineLength/2, maxLineLength/2);
+
 		var rotation = radians(walker1.r);
-		var rotatedWalker1 = walker1.rotate_point((walker1.x+walker2.x)/2,(walker1.y+walker2.y)/2,rotation, walker1.x,walker1.y);
-  		var rotatedWalker2 = walker1.rotate_point((walker1.x+walker2.x)/2,(walker1.y+walker2.y)/2,rotation, walker2.x,walker2.y);
+		var rotatedWalker1 = walker1.rotate_point(walker1.x,walker1.y,rotation, lx1,ly1);
+  		var rotatedWalker2 = walker1.rotate_point(walker1.x,walker1.y,rotation, lx2,ly2);
 
 		shaderLayer.shader(effectShader);
 		effectShader.setUniform("u_resolution", [w, h]);
@@ -455,6 +533,7 @@
 		effectShader.setUniform("strokeBlur", strokeBlurSlider.value());
 		effectShader.setUniform("strokeFade", strokeFadeSlider.value());
 		effectShader.setUniform("strokeRotation", rotation);
+		effectShader.setUniform("colorChangeSpeed", textboxcolorChangeSpeedSlider.value());
 		effectShader.setUniform("uIteration", iteration);
 		effectShader.setUniform("tex", copyLayer);
 		effectShader.setUniform("bgColor", [ color0.color()._array[0], color0.color()._array[1], color0.color()._array[2] ]);
