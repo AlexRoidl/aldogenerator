@@ -345,13 +345,44 @@
 		color1 = createColorPicker(color(255, 148, 53));
 		color1.position(width+40, 150);
 		color2 = createColorPicker(color(220, 72, 82));
-		color2.position(width+100, 150);
+		color2.position(width+110, 150);
 		color3 = createColorPicker(color(60, 40, 99));
-		color3.position(width+160, 150);
+		color3.position(width+180, 150);
 		color4 = createColorPicker(color(28, 68, 109));
-		color4.position(width+220, 150);
+		color4.position(width+250, 150);
 		color5 = createColorPicker(color(0, 145, 100));
-		color5.position(width+280, 150);
+		color5.position(width+320, 150);
+
+
+		textboxColor1 = createInput('');
+  		textboxColor1.position(width+40, 180);
+  		textboxColor1.value(color1.value());
+  		textboxColor1.size(50)
+  		textboxColor1.input(updateColor1);
+
+  		textboxColor2 = createInput('');
+  		textboxColor2.position(width+110, 180);
+  		textboxColor2.value(color2.value());
+  		textboxColor2.size(50)
+  		textboxColor2.input(updateColor2);
+
+  		textboxColor3 = createInput('');
+  		textboxColor3.position(width+180, 180);
+  		textboxColor3.value(color3.value());
+  		textboxColor3.size(50)
+  		textboxColor3.input(updateColor3);
+
+  		textboxColor4 = createInput('');
+  		textboxColor4.position(width+250, 180);
+  		textboxColor4.value(color4.value());
+  		textboxColor4.size(50)
+  		textboxColor4.input(updateColor4);
+
+  		textboxColor5 = createInput('');
+  		textboxColor5.position(width+320, 180);
+  		textboxColor5.value(color5.value());
+  		textboxColor5.size(50)
+  		textboxColor5.input(updateColor5);
 
 		// checkbox = createCheckbox('blur', true);
 		// checkbox.position(width+40, 150);
@@ -452,6 +483,25 @@
 	}
 	function updateColorChangeSlide(){
 		colorChangeSpeedSlider.value(textboxcolorChangeSpeedSlider.value());
+	}
+
+
+
+	function updateColor1(){
+
+		color1.value(textboxColor1.value());
+	}
+	function updateColor2(){
+		color2.value(textboxColor2.value());
+	}
+	function updateColor3(){
+		color3.value(textboxColor3.value());
+	}
+	function updateColor4(){
+		color4.value(textboxColor4.value());
+	}
+	function updateColor5(){
+		color5.value(textboxColor5.value());
 	}
 
 
