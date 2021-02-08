@@ -160,7 +160,7 @@
 
 
 	function initForRecord() {
-		iteration = 0;
+		//iteration = 0;
 		if(resetOnRecord) copyLayer.background(color0.color());
 		console.log("OVERLAY");
 		let overlay = select("#overlayRec");
@@ -181,9 +181,12 @@
 
 			for(var x = 0; x <= 30;x++){
 
-			var iterations = int(strokeSpeedSlider.value()/1);
+
+			var iterations = 1;
+			if(strokeSpeedSlider.value()>1) iterations = strokeSpeedSlider.value()/1;
+
 			for (var t = 0; t<iterations;t++){
-			    visualize(t, totalFrames);
+			    visualize(i, totalFrames);
 			}
 
 				document.getElementById("overlayRec").firstChild.innerHTML = i +" of " +int(totalFrames)+ " frames";
@@ -512,7 +515,7 @@
 			var iterations = strokeSpeedSlider.value()/1;
 
 			for (var i = 0; i<iterations;i++){
-			visualize(sound.getCurrentTime(), sound.getDuration());
+			  visualize(sound.getCurrentTime(), sound.getDuration());
 			}
 		}
 	    imageMode(CORNER);
