@@ -356,6 +356,11 @@
 		color5 = createColorPicker(color(0, 145, 100));
 		color5.position(width+320, 150);
 
+		textboxColor0 = createInput('');
+  		textboxColor0.position(width+100, 85);
+  		textboxColor0.value(color0.value());
+  		textboxColor0.size(50)
+  		textboxColor0.input(updateColor0);
 
 		textboxColor1 = createInput('');
   		textboxColor1.position(width+40, 180);
@@ -490,6 +495,10 @@
 
 
 
+	function updateColor0(){
+
+		color0.value(textboxColor0.value());
+	}
 	function updateColor1(){
 
 		color1.value(textboxColor1.value());

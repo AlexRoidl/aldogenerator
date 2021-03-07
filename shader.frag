@@ -168,7 +168,10 @@ vec3 distanceColor(vec2 a, vec2 b, vec2 p) {
 		// Map the angle (-PI to PI) to the Hue (from 0 to 1)
 		// and the Saturation to the radius
 		//vec3 color = vec3(custCol(sin(angle/TWO_PI)*2.));
-		vec3 color = vec3(custCol(strokeRotation/TWO_PI*2.+(uIteration/75.*colorChangeSpeed)));
+
+		//previous one, with dependence on Rotatation + slow movement over time. 
+		//vec3 color = vec3(custCol(strokeRotation/TWO_PI*2.+(uIteration/75.*colorChangeSpeed)));
+		vec3 color = vec3(custCol((uIteration/75.*colorChangeSpeed)));
 		//vec3 color = vec3(custCol(u_time/15.*colorChangeSpeed));
 		
 		return color;
